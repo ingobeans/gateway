@@ -34,8 +34,34 @@ async def on_ready():
                                  activity=discord.Game("with beans"))
 
 @client.command()
-async def cmd(ctx):
-    await ctx.send("This is a command 🤠, " + ctx.author.name)
+async def link(ctx:discord.Message, *ids):
+    channels_to_append = []
+    if len(ids) < 1:
+        return
+    for id in ids:
+        try:
+            if get_link(int(id)):
+                await ctx.reply(f"Channel {id} is already linked elsewhere.")
+                return
+            channel = client.get_channel(int(id))
+            if not channel:
+                raise ValueError
+            channels_to_append.append(channel.id)
+        except:
+            await ctx.reply(f"Channel {id} is invalid.")
+            return
+        
+    if len(channels_to_append) < 1:
+        return
+    link = get_link(ctx.channel.id)
+    if not link:
+        config["links"].append({"channels":[ctx.channel.id]})
+        save_config(config)
+        link = config["links"][-1]
+
+    link["channels"] += channels_to_append
+    save_config(config)
+    await ctx.reply(f"Linked {', '.join(ids)}")
 
 def get_link(id):
     for link in config["links"]:
