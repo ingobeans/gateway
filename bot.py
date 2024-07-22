@@ -82,7 +82,11 @@ def get_link(id):
 
 @client.event
 async def on_message(message:discord.Message):
-    if config["links"] and not message.author.bot:
+    if not (
+            len(config["links"]) == 0 or
+            message.author.bot or
+            message.content.startswith(("!","/","."))
+        ):
         link = get_link(message.channel.id)
         if link:
             for other_linked_channel in [c for c in link["channels"] if c != message.channel.id]:
