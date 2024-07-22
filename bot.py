@@ -21,6 +21,30 @@ def save_config(config):
     with open("config.json","w") as f:
         json.dump(config, f, indent=4)
 
+def add_ids(ctx, ids):
+    channels_to_append = []
+    for id in ids:
+        try:
+            if get_link(int(id)):
+                return f"Channel {id} is already linked elsewhere."
+            channel = client.get_channel(int(id))
+            if not channel:
+                raise ValueError
+            channels_to_append.append(channel.id)
+        except:
+            return f"Channel {id} is invalid."
+        
+    if len(channels_to_append) < 1:
+        return "No channels to link"
+    link = get_link(ctx.channel.id)
+    if not link:
+        config["links"].append({"channels":[ctx.channel.id]})
+        save_config(config)
+        link = config["links"][-1]
+
+    link["channels"] += channels_to_append
+    save_config(config)
+    return f"Linked {', '.join(ids)}"
 config = load_config()
 
 if not config["token"]:
@@ -34,44 +58,29 @@ async def on_ready():
                                  activity=discord.Game("with beans"))
 
 @client.command()
-async def link(ctx:discord.Message, *ids):
-    channels_to_append = []
-    if len(ids) < 1:
-        await ctx.reply("Syntax: `!link <IDs of channels to link seperated by spaces> | !link clear`")
-        return
-    if ids[0] == "clear":
-        link = get_link(ctx.channel.id)
-        if not link:
-            await ctx.reply("This channel isn't connected to a link network.")
-            return
-        config["links"].remove(link)
-        save_config(config)
-        await ctx.reply("Cleared link network.")
-        return
-    for id in ids:
-        try:
-            if get_link(int(id)):
-                await ctx.reply(f"Channel {id} is already linked elsewhere.")
+async def link(ctx:discord.Message, mode=None, *ids):
+    if not mode:
+        await ctx.reply("Syntax: `!link add <IDs of channels to link seperated by spaces> | !link clear | !link status`")
+    match mode:
+        case "clear":
+            link = get_link(ctx.channel.id)
+            if not link:
+                await ctx.reply("This channel isn't connected to a link network.")
                 return
-            channel = client.get_channel(int(id))
-            if not channel:
-                raise ValueError
-            channels_to_append.append(channel.id)
-        except:
-            await ctx.reply(f"Channel {id} is invalid.")
+            config["links"].remove(link)
+            save_config(config)
+            await ctx.reply("Cleared link network.")
             return
-        
-    if len(channels_to_append) < 1:
-        return
-    link = get_link(ctx.channel.id)
-    if not link:
-        config["links"].append({"channels":[ctx.channel.id]})
-        save_config(config)
-        link = config["links"][-1]
-
-    link["channels"] += channels_to_append
-    save_config(config)
-    await ctx.reply(f"Linked {', '.join(ids)}")
+        case "add":
+            if len(ids) < 1:
+                await ctx.reply("No IDs specified.")
+                return
+            await ctx.reply(add_ids(ctx, ids))
+        case "status":
+            link = get_link(ctx.channel.id)
+            if not link:
+                await ctx.reply("This channel isn't connected to a link network.")
+            await ctx.reply(f"This channel is currently linked to: {', '.join([str(l) for l in link['channels'] if l != ctx.channel.id])}")
 
 def get_link(id):
     for link in config["links"]:
