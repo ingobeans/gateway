@@ -37,6 +37,16 @@ async def on_ready():
 async def link(ctx:discord.Message, *ids):
     channels_to_append = []
     if len(ids) < 1:
+        await ctx.reply("Syntax: `!link <IDs of channels to link seperated by spaces> | !link clear`")
+        return
+    if ids[0] == "clear":
+        link = get_link(ctx.channel.id)
+        if not link:
+            await ctx.reply("This channel isn't connected to a link network.")
+            return
+        config["links"].remove(link)
+        save_config(config)
+        await ctx.reply("Cleared link network.")
         return
     for id in ids:
         try:
