@@ -41,15 +41,15 @@ def get_link(id):
     for link in config["links"]:
         for channel in link["channels"]:
             if channel == id:
-                return link, channel
-    return None, None
+                return link
+    return None
 
 @client.event
 async def on_message(message:discord.Message):
     if config["links"] and not message.author.bot:
-        link, channel = get_link(message.channel.id)
+        link = get_link(message.channel.id)
         if link:
-            for other_linked_channel in [c for c in link["channels"] if c != channel]:
+            for other_linked_channel in [c for c in link["channels"] if c != message.channel.id]:
                 instance = client.get_channel(other_linked_channel)
                 await instance.send(message.content)
 
